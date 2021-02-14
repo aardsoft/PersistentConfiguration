@@ -1,0 +1,108 @@
+* PersistentConfiguration                                             :TOC_4:
+  - [[#introduction][Introduction]]
+  - [[#configuration][Configuration]]
+    - [[#config_struct][CONFIG_STRUCT]]
+    - [[#state_struct][STATE_STRUCT]]
+    - [[#config_magic][CONFIG_MAGIC]]
+  - [[#methods-and-variables][Methods and variables]]
+    - [[#config][config]]
+    - [[#state][state]]
+    - [[#load][load()]]
+    - [[#save][save()]]
+  - [[#usage-example][Usage example]]
+
+** Introduction
+This is a very thin wrapper around [[https://www.arduino.cc/en/Reference/EEPROM][EEPROM]], mainly to provide shared variables and defines, allowing libraries to expect persistent configuration fields for saving data to be available. One example is the [[https://github.com/bwachter/MACTool][MACTool]] library, expecting the =mac= entry. It is up to the user to define the configuration entries described in each libraries documentation.
+
+** Configuration
+
+This library can be configured using defines in the sketch. It is possible to use it without any configuration for the first software version, later ones need to change at least =CONFIG_MAGIC=.
+
+Depending on the way this is compiled it might be required to explicitely add the EEPROM library to the main sketch.
+
+*** CONFIG_STRUCT
+
+A struct defining the data written to the EEPROM, with the default defined as follows:
+
+#+BEGIN_SRC C++
+struct PersistentConfig{
+    unsigned int magic;
+    // MAC address used by this device
+    char mac[18];
+};
+#+END_SRC
+
+magic is the only mandatory field here, used for checking if a configuration is valid, and which software version the configuration data belongs to. The MAC address field is often sensible on non-Ethernet-devices as well as an easy to use unique identifier. The MAC address can be generated and verified using the MACTools library.
+
+To use a custom struct for additional configuration fields define a struct with a different name, and do
+
+#+BEGIN_SRC C++
+#define CONFIG_STRUCT MyConfigStruct
+#+END_SRC
+
+*** STATE_STRUCT
+A struct containing state data, with the default definition as follows:
+
+#+BEGIN_SRC C++
+struct PersistentState{
+    // track if there are unsaved config changes
+    bool config_changed = false;
+};
+#+END_SRC
+
+To use a custom struct for also tracking application state define a struct with a different name, and do
+
+#+BEGIN_SRC C++
+#define STATE_STRUCT MyStateStruct
+#+END_SRC
+
+*** CONFIG_MAGIC
+Magic to check if the configuration was initialized and is the latest version. Defaults to 0xA001.
+
+** Methods and variables
+*** config
+A shared variable of type CONFIG_STRUCT defining the configuration saved to the EEPROM. Any application wanting to save more than a persistent MAC address will want to use a custom struct for this.
+*** state
+A shared variable of type STATE_STRUCT to track the state of the configuration data. It often makes sense to use a custom struct here to also track application state in the same variable.
+*** load()
+Load the configuration from EEPROM into a CONFIG_STRUCT variable named =config=.
+*** save()
+Save the configuration from a CONFIG_STRUCT variable named =config=, if the config_changed field of the =state= variable of type STATE_STRUCT is true. This additional check avoids unnecessary write cycles wearing out the EEPROM.
+** Usage example
+
+#+BEGIN_SRC C++
+PersistentConfiguration c;
+
+void setup(){
+  // this will load the EEPROM configuration into the config variable
+  // the data loaded might be invalid, so in a next step that needs to
+  // be verified.
+  c.load();
+
+  // when using the MACTool library this is a useful additional step to
+  // check sanity of the configuration - this will check if the EEPROM
+  // contains a valid MAC address, and if not, generate one.
+  init_MAC();
+
+  // check if the configuration has a known magic value. This is the bare
+  // minimum for verifying stored configuration. Values which are supposed
+  // to persist (like MAC addresses) should be separately checked for validity.
+  // To upgrade configuration between versions two ways are possible:
+  // - if magic is wrong, check each entry that shouldn't be set to defaults
+  //   for sanity, and keep it if it makes sense
+  // - add defines like CONFIG_MAGIC_V1 for magic of older versions upgrade
+  //   should be possible from, check the magic field against those, and on
+  //   match selectively upgrade the fields added/changed since then
+  if (config.app_magic != CONFIG_MAGIC){
+    // [..]
+    // initialize all the config members to defaults here, as described above
+    // [..]
+    // this needs to be set to true on configuration changes. To avoid EEPROM
+    // wear the save function will only save data if it is marked as changed.
+    state.config_changed=true;
+  }
+
+  // save data to EEPROM if state.config_changed is true
+  c.save();
+}
+#+END_SRC
