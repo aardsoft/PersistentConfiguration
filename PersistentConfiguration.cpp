@@ -16,8 +16,10 @@ PersistentConfiguration::PersistentConfiguration(){
 }
 
 void PersistentConfiguration::save(){
-  if (state.config_changed)
+  if (state.config_changed){
+    config.magic=CONFIG_MAGIC;
     EEPROM.put(0, config);
+  }
   state.config_changed=false;
 }
 
