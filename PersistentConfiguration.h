@@ -8,9 +8,19 @@
 #ifndef _PERSISTENTCONFIGURATION_H
 #define _PERSISTENTCONFIGURATION_H
 
+/*
+ * This is disabled to avoid masking incorrect defines of custom configuration
+ * structures. It can be enabled (or just defined like this) in the sketch
+ * for using the minimal configuration structure by just removing the two
+ * spaces below. Note that if this is enabled here, and an improperly
+ * defined custom structure used additional members may get overwritten
+ * in memory.
+ * /
 #ifndef CONFIG_STRUCT
 #define CONFIG_STRUCT PersistentConfig
 #endif
+/ *
+*/
 
 #ifndef STATE_STRUCT
 #define STATE_STRUCT PersistentState

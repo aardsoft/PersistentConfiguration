@@ -40,6 +40,8 @@ To use a custom struct for additional configuration fields define a struct with 
 #define CONFIG_STRUCT MyConfigStruct
 #+END_SRC
 
+Depending on how you compile the code this may also need to be set as a compiler flag. CONFIG_STRUCT is not defined per default to throw a compiler error on incorrect definitions.
+
 *** STATE_STRUCT
 A struct containing state data, with the default definition as follows:
 
